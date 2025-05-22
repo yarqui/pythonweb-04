@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quiz: AIOHTTP Client Sessions</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: auto;
+        padding: 20px;
+        background: #f4f4f4;
+      }
+      h1 {
+        text-align: center;
+        color: #333;
+      }
+      .question {
+        background: #fff;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        margin-bottom: 20px;
+      }
+      .question p {
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      label {
+        display: block;
+        margin: 5px 0;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+      label:hover {
+        background-color: #e9e9e9;
+      }
+      label input[type="radio"] {
+        margin-right: 10px;
+      }
+      label.correct {
+        background-color: #d4edda; /* Light green */
+        border-color: #c3e6cb;
+      }
+      label.incorrect {
+        background-color: #f8d7da; /* Light red */
+        border-color: #f5c6cb;
+      }
+      /* Style for the correct answer if the user chose incorrectly */
+      .question.answered .correct {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+      }
+      label.unanswered {
+        background-color: #fff3cd; /* Light yellow */
+        border-color: #ffeeba;
+      }
+      button {
+        display: block;
+        width: 100%;
+        padding: 12px 20px;
+        font-size: 18px;
+        margin-top: 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      .result {
+        font-weight: bold;
+        font-size: 20px;
+        margin-top: 20px;
+        text-align: center;
+        padding: 15px;
+        border-radius: 8px;
+        background-color: #e9ecef;
+        border: 1px solid #dee2e6;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Quiz: AIOHTTP Client Sessions</h1>
+
+    <form id="quizForm"></form>
+    <button type="button" id="checkAnswersButton">Check Answers</button>
+    <div class="result" id="result"></div>
+
+    <script>
+      const questions = [
+        {
+          text: "What is the recommended approach for managing `aiohttp` connections and releasing system resources?",
+          name: "q1",
+          correct: "a",
+          options: {
+            a: "Using context managers (`async with`)",
+            b: "Manually calling `response.close()` only",
+            c: "Letting Python's garbage collector handle it",
+            d: "Using a global session object",
+          },
+        },
+        {
+          text: "If you choose *not* to use context managers for `aiohttp.ClientSession` and `response` objects, what must you do manually?",
+          name: "q2",
+          correct: "c",
+          options: {
+            a: "Only `await session.close()`",
+            b: "Only `response.close()`",
+            c: "`response.close()` and `await session.close()`",
+            d: "Nothing, they close automatically",
+          },
+        },
+        {
+          text: "What is the primary benefit of using a single `aiohttp.ClientSession` for multiple requests to the same service?",
+          name: "q3",
+          correct: "d",
+          options: {
+            a: "It simplifies error handling",
+            b: "It allows for concurrent requests, regardless of service",
+            c: "It makes the code more readable",
+            d: "It significantly speeds up execution by reusing connections",
+          },
+        },
+        {
+          text: "In the example provided, how are two requests (`index` and `doc`) made 'simultaneously' using the same session?",
+          name: "q4",
+          correct: "a",
+          options: {
+            a: "By using `asyncio.gather()` with the shared session",
+            b: "By creating a new session for each request",
+            c: "By chaining `.get()` calls directly",
+            d: "By using a synchronous loop",
+          },
+        },
+        {
+          text: "What type of object is `aiohttp.ClientSession` that allows for individual configuration of all requests within that session?",
+          name: "q5",
+          correct: "b",
+          options: {
+            a: "A response object",
+            b: "A session object",
+            c: "A request object",
+            d: "A connection pool",
+          },
+        },
+        {
+          text: "Which argument can be passed to the `aiohttp.ClientSession` constructor to include a common set of headers for all requests made using that session?",
+          name: "q6",
+          correct: "a",
+          options: {
+            a: "`headers` (dictionary)",
+            b: "`default_headers` (list)",
+            c: "`session_headers` (string)",
+            d: "`add_headers` (tuple)",
+          },
+        },
+        {
+          text: "To set a total timeout for requests within an `aiohttp.ClientSession`, what object is used and passed as an argument to the session constructor?",
+          name: "q7",
+          correct: "c",
+          options: {
+            a: "`asyncio.Timeout`",
+            b: "`session.set_timeout()`",
+            c: "`aiohttp.ClientTimeout`",
+            d: "`timeout_seconds` (integer)",
+          },
+        },
+        {
+          text: "Besides `GET`, which of the following HTTP methods is NOT explicitly mentioned as being supported by `ClientSession` in the provided examples?",
+          name: "q8",
+          correct: "d",
+          options: {
+            a: "`POST`",
+            b: "`DELETE`",
+            c: "`HEAD`",
+            d: "`CONNECT`",
+          },
+        },
+        {
+          text: "When sending a `POST` request with AIOHTTP, which argument is typically used to send the request body data?",
+          name: "q9",
+          correct: "a",
+          options: {
+            a: "`data`",
+            b: "`body`",
+            c: "`payload`",
+            d: "`content`",
+          },
+        },
+        {
+          text: "In the `aiohttp` client example for sending a `POST` request to `localhost:5000`, what was the purpose of `ssl=False`?",
+          name: "q10",
+          correct: "c",
+          options: {
+            a: "To encrypt the connection for security",
+            b: "To enable SSL/TLS certificate verification",
+            c: "To disable SSL/TLS for a local HTTP connection",
+            d: "It's a placeholder and has no effect",
+          },
+        },
+        {
+          text: "According to the text, why is it important to handle errors in network requests?",
+          name: "q11",
+          correct: "b",
+          options: {
+            a: "To always retry failed requests automatically",
+            b: "Because non-existent paths or 'broken' links can occur and need to be processed",
+            c: "To increase the speed of the application",
+            d: "To log all requests to a file",
+          },
+        },
+        {
+          text: "How are errors with HTTP status codes greater than 200 (e.g., 404 Not Found) typically handled in the `aiohttp` example?",
+          name: "q12",
+          correct: "c",
+          options: {
+            a: "Automatically by `aiohttp` without specific code",
+            b: "By catching `aiohttp.HTTPError`",
+            c: "By using a simple conditional check on `resp.status`",
+            d: "They cause the program to crash",
+          },
+        },
+        {
+          text: "What specific exception class is used in the `try/except` block to catch connection errors in `aiohttp`?",
+          name: "q13",
+          correct: "a",
+          options: {
+            a: "`aiohttp.ClientConnectorError`",
+            b: "`aiohttp.ConnectionError`",
+            c: "`aiohttp.NetworkError`",
+            d: "`aiohttp.RequestError`",
+          },
+        },
+        {
+          text: "When a `aiohttp.ClientConnectorError` occurs, what does it typically indicate?",
+          name: "q14",
+          correct: "b",
+          options: {
+            a: "The server returned a 4xx or 5xx status code",
+            b: "There was a problem establishing a connection to the host (e.g., host not found, port blocked)",
+            c: "The request timed out before receiving a full response",
+            d: "The response body could not be decoded",
+          },
+        },
+        {
+          text: "Consider a request to `http://test` which results in `Connection error: http://test Cannot connect to host test:80 ssl:default [getaddrinfo failed]`. This is an example of what type of error?",
+          name: "q15",
+          correct: "b",
+          options: {
+            a: "HTTP status error (e.g., 404)",
+            b: "Connection error",
+            c: "Timeout error",
+            d: "Invalid response content type",
+          },
+        },
+        {
+          text: "AIOHTTP is fundamentally a web framework based on which Python asynchronous library?",
+          name: "q16",
+          correct: "c",
+          options: {
+            a: "threading",
+            b: "multiprocessing",
+            c: "asyncio",
+            d: "socket",
+          },
+        },
+        {
+          text: "To get the response body as a string, particularly if the content type is `text/html`, which `response` object method should you use?",
+          name: "q17",
+          correct: "a",
+          options: {
+            a: "`await response.text()`",
+            b: "`await response.read()`",
+            c: "`await response.json()`",
+            d: "`response.body_str()`",
+          },
+        },
+        {
+          text: "If the server's response `Content-type` is `application/json`, which `response` object method automatically decodes it into a Python object?",
+          name: "q18",
+          correct: "c",
+          options: {
+            a: "`response.decode_json()`",
+            b: "`response.to_dict()`",
+            c: "`await response.json()`",
+            d: "`await response.parse_json()`",
+          },
+        },
+        {
+          text: "What does the `response.ok` attribute indicate in `aiohttp`?",
+          name: "q19",
+          correct: "a",
+          options: {
+            a: "The HTTP status code is less than 400",
+            b: "The HTTP status code is exactly 200",
+            c: "The response body is not empty",
+            d: "The connection was securely established",
+          },
+        },
+        {
+          text: "The `asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())` snippet is specifically mentioned for solving an error related to what system?",
+          name: "q20",
+          correct: "b",
+          options: {
+            a: "macOS",
+            b: "Windows",
+            c: "Linux",
+            d: "Android",
+          },
+        },
+      ];
+
+      const form = document.getElementById("quizForm");
+      const checkButton = document.getElementById("checkAnswersButton");
+      const resultDiv = document.getElementById("result");
+
+      // Function to render the questions
+      function renderQuestions() {
+        form.innerHTML = ""; // Clear form before rendering
+        questions.forEach((q) => {
+          const div = document.createElement("div");
+          div.className = "question";
+          div.setAttribute("data-name", q.name); // Add data attribute for easy lookup
+          div.innerHTML =
+            `<p>${q.text}</p>` +
+            Object.entries(q.options)
+              .map(
+                ([key, val]) =>
+                  `<label><input type="radio" name="${q.name}" value="${key}"> ${val}</label>`
+              )
+              .join("");
+          form.appendChild(div);
+        });
+      }
+
+      // Function to check answers
+      function checkAnswers() {
+        let score = 0;
+        let allAnswered = true; // Flag to check if all questions are answered
+
+        questions.forEach((q) => {
+          const questionDiv = form.querySelector(
+            `.question[data-name="${q.name}"]`
+          );
+          const inputs = questionDiv.querySelectorAll(
+            `input[name="${q.name}"]`
+          );
+          let selectedValue = null;
+
+          // Disable inputs and determine selected value
+          inputs.forEach((input) => {
+            if (input.checked) {
+              selectedValue = input.value;
+            }
+            input.disabled = true; // Disable inputs after user has checked
+          });
+
+          // Remove previous feedback classes
+          inputs.forEach((input) => {
+            input.parentElement.classList.remove(
+              "correct",
+              "incorrect",
+              "unanswered"
+            );
+          });
+
+          if (selectedValue === null) {
+            allAnswered = false;
+            // Mark question as unanswered
+            inputs.forEach((input) => {
+              input.parentElement.classList.add("unanswered");
+            });
+            questionDiv.classList.add("answered"); // Mark question div as checked
+          } else {
+            questionDiv.classList.add("answered"); // Mark question div as checked
+            if (selectedValue === q.correct) {
+              score++;
+              // Mark only the selected (correct) option
+              inputs.forEach((input) => {
+                if (input.checked) input.parentElement.classList.add("correct");
+              });
+            } else {
+              // Mark selected (incorrect) and the correct option
+              inputs.forEach((input) => {
+                if (input.checked)
+                  input.parentElement.classList.add("incorrect");
+                if (input.value === q.correct)
+                  input.parentElement.classList.add("correct");
+              });
+            }
+          }
+        });
+
+        if (!allAnswered) {
+          resultDiv.textContent = `Please answer all questions before checking.`;
+          resultDiv.style.color = "orange";
+        } else {
+          resultDiv.textContent = `Your score: ${score} correct out of ${questions.length}.`;
+          resultDiv.style.color =
+            score > questions.length / 2 ? "green" : "red"; // Simple color feedback
+        }
+      }
+
+      // Initial rendering of questions
+      renderQuestions();
+
+      // Add event listener to the button
+      checkButton.addEventListener("click", checkAnswers);
+    </script>
+  </body>
+</html>
